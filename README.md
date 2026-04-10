@@ -170,6 +170,114 @@ DocTags is Docling's own markup language. It is a structured text format that us
 
 <img width="1191" height="642" alt="image" src="https://github.com/user-attachments/assets/b4468906-6e5c-4d36-bbbd-af90d4af8b9a" />
 
+**Observation**
+- Wall time: 2 min 3 s
+- CPU time: user 260 ms + sys 43.7 ms = total 304 ms
+- Output size: 28 KB
+- The Output produced was a lightweight file(28 KB) with semantic structure and document heirarchy well preserved.
+- This output looked a lot different than the rest of the documents generated thus far so i wanted to take a deeper look into the output. I found that every piece of content was wraped in small XML-style tags. The location co-ordinates like `<loc_153>` `<loc_210>` tell exactly where that text or image sits on the page.
+- DocTags may be useful for RAG applications that require lightweight processing with basic structure and region aware retrieval but for most RAG systems Markdown or JSON format are much easier to work with.
+
+### Image Modes
+
+#### HTML Embedded 
+
+```python
+%%time
+!docling documents/docling_brochure.pdf \
+  --to html \
+  --output outputs/html_embedded/
+
+!du -h outputs/html_embedded/docling_brochure.html
+```
+**Output**
+
+This is what the rendered file looked like
+
+<img width="1032" height="860" alt="image" src="https://github.com/user-attachments/assets/32782a35-21e6-44aa-91d4-cc3ae7563115" />
+
+
+### HTML Placeholder
+
+```python
+%%time
+!docling documents/docling_brochure.pdf \
+  --to html \
+  --image-export-mode placeholder \
+  --page-batch-size 1 \
+  --pdf-backend pypdfium2 \
+  --output outputs/html_placeholder/ 2>&1 | tee outputs/html_placeholder/log.txt
+
+!du -h outputs/html_placeholder/docling_brochure.html
+```
+
+
+**Output**
+
+This is what the rendered file looked like
+
+<img width="1032" height="843" alt="image" src="https://github.com/user-attachments/assets/12cd689e-1743-4379-aa17-395d9748c111" />
+
+#### Image Mode Size Comparision
+
+I wrote some code to compare both the image handling formats
+```python
+emb = os.path.getsize("outputs/html_embedded/docling_brochure.html")
+ph  = os.path.getsize("outputs/html_placeholder/docling_brochure.html")
+
+print(f"Embedded    : {emb:,} bytes ({emb/1024:.1f} KB)")
+print(f"Placeholder : {ph:,} bytes ({ph/1024:.1f} KB)")
+print(f"\nEmbedded is {emb/ph:.0f}x larger than placeholder")
+```
+
+**Output**
+
+```bash
+Embedded    : 1,178,502 bytes (1150.9 KB)
+Placeholder : 18,286 bytes (17.9 KB)
+
+Embedded is 64x larger than placeholder
+```
+
+**Observation**
+
+**1. HTML Embedded**
+
+  - Maintains good visual layout & headings and keeps all icons and images visible. 
+  - Extremely large file size (64× bigger) because every image is converted to base64 strings.
+  - These base64 blocks create a lot of noise when chunking and embedding 
+  - This format may be helpful when using multimodal RAG with vision models.
+
+**2. HTML Placeholder**
+
+  - The output file is very small and lightweight (18 KB).
+  - It has clean text and structure with minimal noise as it removes visual clutter that doesn't add value to text-based RAG systems which means that content of this format is easy to chunk.
+  - This format is useful for text-based RAG systems that involve searching over documents and question answering.
+
+## Testing Table extraction with Docling
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+- 
+
 
 
 
