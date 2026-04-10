@@ -368,6 +368,11 @@ A RAG system querying "What is the cost of a Diamond sponsorship?" would retriev
 
 ## OCR Related Experiments
 
+Docling's OCR engine(Rapid OCR) handles text extraction from image based regions. Two flags control it's OCR behaviour
+
+- `--no-ocr` - disables ocr entirely, text comes only from the PDF's embedded text layer
+- `--force-ocr` - forces OCR on every region of every page regardless of whether embedded text exists
+
 ### `--no-ocr` 
 
 ```python
@@ -381,6 +386,12 @@ A RAG system querying "What is the cost of a Diamond sponsorship?" would retriev
 !wc -l outputs/no_ocr/docling_brochure.md
 ```
 
+**Output**
+
+- Wall time: 1minute 9 seconds
+- Output is 1.2MB with 281 lines identical to the baseline which means that no extra lines or phantom rows were added.
+- The table generated in the rendered file was clean and retained original structure.
+
 ### `--force-ocr`
 
 ```python
@@ -392,55 +403,24 @@ A RAG system querying "What is the cost of a Diamond sponsorship?" would retriev
   --output outputs/force_ocr/ 2>&1 | tee outputs/force_ocr/log.txt
 ```
 
-### Ocr Profiling
-
-```python
-import re
-
-with open("outputs/force_ocr/log.txt") as f:
-    raw = f.read()
-
-clean = re.sub(r'\033\[[0-9;]*m', '', raw)
-for line in clean.split('\n'):
-    if line.strip():
-        print(line)
-```
-
 **Output**
 
-```bash
-[INFO] 2026-04-09 08:29:49,209 [RapidOCR] base.py:22: Using engine_name: torch
-[INFO] 2026-04-09 08:29:49,213 [RapidOCR] device_config.py:57: Using CPU device
-[INFO] 2026-04-09 08:29:49,261 [RapidOCR] download_file.py:60: File exists and is valid: /usr/local/lib/python3.12/dist-packages/rapidocr/models/ch_PP-OCRv4_det_mobile.pth
-[INFO] 2026-04-09 08:29:49,261 [RapidOCR] main.py:50: Using /usr/local/lib/python3.12/dist-packages/rapidocr/models/ch_PP-OCRv4_det_mobile.pth
-[INFO] 2026-04-09 08:29:49,512 [RapidOCR] base.py:22: Using engine_name: torch
-[INFO] 2026-04-09 08:29:49,512 [RapidOCR] device_config.py:57: Using CPU device
-[INFO] 2026-04-09 08:29:49,515 [RapidOCR] download_file.py:60: File exists and is valid: /usr/local/lib/python3.12/dist-packages/rapidocr/models/ch_ptocr_mobile_v2.0_cls_mobile.pth
-[INFO] 2026-04-09 08:29:49,515 [RapidOCR] main.py:50: Using /usr/local/lib/python3.12/dist-packages/rapidocr/models/ch_ptocr_mobile_v2.0_cls_mobile.pth
-[INFO] 2026-04-09 08:29:49,608 [RapidOCR] base.py:22: Using engine_name: torch
-[INFO] 2026-04-09 08:29:49,608 [RapidOCR] device_config.py:57: Using CPU device
-[INFO] 2026-04-09 08:29:49,693 [RapidOCR] download_file.py:60: File exists and is valid: /usr/local/lib/python3.12/dist-packages/rapidocr/models/ch_PP-OCRv4_rec_mobile.pth
-[INFO] 2026-04-09 08:29:49,694 [RapidOCR] main.py:50: Using /usr/local/lib/python3.12/dist-packages/rapidocr/models/ch_PP-OCRv4_rec_mobile.pth
-Loading weights:   0%|          | 0/770 [00:00<?, ?it/s]
-Loading weights: 100%|██████████| 770/770 [00:00<00:00, 15094.83it/s]
-                      Profiling Summary, docling_brochure                       
-┏━━━━━━━━┳━━━━━━━┳━━━━━━━━┳━━━━━━━━┳━━━━━━━━┳━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━━┓
-┃        ┃       ┃        ┃        ┃        ┃        ┃        ┃ 0.1   ┃ 0.9    ┃
-┃ Stage  ┃ count ┃ total  ┃ mean   ┃ median ┃ min    ┃ max    ┃ perc… ┃ perce… ┃
-┡━━━━━━━━╇━━━━━━━╇━━━━━━━━╇━━━━━━━━╇━━━━━━━━╇━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━━┩
-│ pipel… │ 1     │ 856.6… │ 856.6… │ 856.6… │ 856.6… │ 856.6… │ 856.… │ 856.6… │
-│ page_… │ 7     │ 7.673… │ 1.096… │ 0.488… │ 0.485… │ 0.491… │ 0.48… │ 0.490… │
-│ ocr    │ 7     │ 846.1… │ 120.8… │ 26.14… │ 24.68… │ 27.60… │ 24.9… │ 27.31… │
-│ layout │ 3     │ 34.42… │ 11.47… │ 4.919… │ 4.913… │ 4.925… │ 4.91… │ 4.924… │
-│ table… │ 7     │ 41.09… │ 5.870… │ 1.847… │ 1.844… │ 1.849… │ 1.84… │ 1.849… │
-│ page_… │ 7     │ 0.003… │ 0.000… │ 0.000… │ 0.000… │ 0.000… │ 0.00… │ 0.000… │
-│ doc_a… │ 1     │ 2.066… │ 2.066… │ 2.066… │ 2.066… │ 2.066… │ 2.06… │ 2.066… │
-│ readi… │ 1     │ 0.058… │ 0.058… │ 0.058… │ 0.058… │ 0.058… │ 0.05… │ 0.058… │
-│ doc_e… │ 1     │ 0.003… │ 0.003… │ 0.003… │ 0.003… │ 0.003… │ 0.00… │ 0.003… │
-└────────┴───────┴────────┴────────┴────────┴────────┴────────┴───────┴────────┘
-```
+- Wall time : 14 minutes and 37 seconds
+- although the table structure was retained but it was not able to detect the check marks in the third last and second last rows
+- Not only  `--force-ocr` took much longer to process the document, it also degraded the quality of the document.
 
-### Analysis
+<img width="940" height="427" alt="Screenshot 2026-04-10 193703" src="https://github.com/user-attachments/assets/3782141f-9076-4d30-8817-cc0373ebd58a" />
+
+
+### Observation
+
+**One peculiar thing i observed for both the OCR modes was that completly miss the footnotes and small text. Both the flags missed the startups, startup sponsorships and non-profit sponsorships footnote as seen in the original brochure below.
+
+
+<img width="916" height="171" alt="Screenshot 2026-04-10 193212" src="https://github.com/user-attachments/assets/1befb642-ce52-4257-9f59-536ccfa3d930" />
+
+
+## Enrich formula flag
 
 
 
