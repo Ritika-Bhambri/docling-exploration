@@ -414,7 +414,7 @@ Docling's OCR engine(Rapid OCR) handles text extraction from image based regions
 
 ### Observation
 
-**One peculiar thing i observed for both the OCR modes was that completly miss the footnotes and small text. Both the flags missed the startups, startup sponsorships and non-profit sponsorships footnote as seen in the original brochure below.
+**One peculiar thing i observed for both the OCR modes was that completly miss the footnotes and small text. Both the flags missed the startups, startup sponsorships and non-profit sponsorships footnote as seen in the original brochure below.**
 
 
 <img width="916" height="171" alt="Screenshot 2026-04-10 193212" src="https://github.com/user-attachments/assets/1befb642-ce52-4257-9f59-536ccfa3d930" />
@@ -442,6 +442,7 @@ Here is the baseline paper without `--enrich code`. The **Attention formula** is
 
 
 ![Transformer-baseline](https://github.com/user-attachments/assets/b76c3372-3fbd-4132-907e-b145f6c4423e)
+
 
 
 ### With `--Enrich-code`
