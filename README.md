@@ -422,7 +422,33 @@ Docling's OCR engine(Rapid OCR) handles text extraction from image based regions
 
 ## Enrich formula flag
 
+To test this flag I used the 'Attention Is All You Need' paper. 
 
+What the `--enrich-formula` flag does internally is that after the standard pipeline extracts text, this flag activates an additional model pass over regions classified as mathematical formulas. The model is trained to interpret mathematical notions and output in a structured format like LaTeX syntax or MathML. 
+
+This is required for PDFs rich in scientific notations and mathematical formulas because PDF stores math as arbitrary positioned characters. for example, the integral sign, the fraction bar and variables stored as seperate positioned glyphs with no inherent relationship. The enrichment model reconstructs the mathematical meaning from the spatial arrangement of glyphs
+
+```python
+%%time
+!docling documents/Transformer_Paper.pdf \
+  --to md \
+  --enrich-formula \
+  --output outputs/enrich_formula/
+```
+
+### Without `--Enrich-code`
+
+Here is the baseline paper without `--enrich code`. The **Attention formula** is garbled PDF glyph positions were extracted as a flat sequence of characters without preserving the structural relation between them.  
+
+
+![Transformer-baseline](https://github.com/user-attachments/assets/b76c3372-3fbd-4132-907e-b145f6c4423e)
+
+
+### With `--Enrich-code`
+
+ Transformer paper with `--enrich-code`. The **Attention formula** is LaTeX formatted which an LLM can parse correctly and a Markdown renderer can display properly.
+
+ ![Transformer-enriched](https://github.com/user-attachments/assets/ac6386c5-4569-4ec7-bc73-17629f672cbd)
 
 
 
