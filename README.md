@@ -254,7 +254,86 @@ Embedded is 64x larger than placeholder
   - It has clean text and structure with minimal noise as it removes visual clutter that doesn't add value to text-based RAG systems which means that content of this format is easy to chunk.
   - This format is useful for text-based RAG systems that involve searching over documents and question answering.
 
-## Testing Table extraction with Docling
+## Table Structure Experiments
+
+To see how docling handles tables I tested two flags `-- accurate` and `--fast` 
+
+### Accurate Mode 
+
+```python
+%%time
+!docling documents/docling_brochure.pdf \
+  --to md \
+  --table-mode accurate \
+  --output outputs/table_accurate/
+
+!wc -l outputs/table_accurate/docling_brochure.md
+```
+
+**Output**
+
+<img width="897" height="700" alt="image" src="https://github.com/user-attachments/assets/fc681433-d440-407f-8539-8efa2610b5d0" />
+
+
+
+### Fast Mode
+
+```python
+%%time
+!docling documents/docling_brochure.pdf \
+  --to md \
+  --table-mode fast \
+  --output outputs/table_fast/
+
+!wc -l outputs/table_fast/docling_brochure.md
+```
+
+**Output**
+
+`--fast` flag generated a table with several inconsistencies. Here are a few images of the table generated that had merged cells and the content of one cell bleeding into the next cell.
+
+
+<img width="627" height="700" alt="image" src="https://github.com/user-attachments/assets/f1c4aa28-d844-4ab1-ab85-64cd9f02c3a1" />
+
+
+
+<img width="895" height="650" alt="image" src="https://github.com/user-attachments/assets/0c185279-e4c3-4ed1-8857-31efa2034605" />
+
+
+
+### Table Corruption Proof
+
+To see what exactly was going wrong i wrote a piece of code to see the table corruption
+
+```python
+!echo "=== ACCURATE ==="
+!grep -n "Social Media\|Attendee Registration\|Sponsorship Cost" \
+  outputs/table_accurate/docling_brochure.md
+
+!echo "=== FAST ==="
+!grep -n "Social Media\|Attendee Registration\|Sponsorship Cost" \
+  outputs/table_fast/docling_brochure.md
+```
+
+**Output**
+
+```bash
+
+=== ACCURATE ===
+146:| Attendee Registration Contact List: Opt-in only                                                                                                                                                                                                              | ✔ (List provided pre and post event)                                                   | ✔ (List provided post event)                                                           |                                                                                        |                                                                                        |                                                                                        |                                                                                        |
+147:| Social Media Promotion: From PyTorch X handle. All custom posts must be approved by the PyTorch Foundation.                                                                                                                                                  | 1 Custom Post, 1 Group Post, and 1 Re-Post                                             | 1 Group Post and 1 Re-Post                                                             | 1 Group Post                                                                           |                                                                                        |                                                                                        |                                                                                        |
+160:| Sponsorship Cost                                                                                                                                                                                                                                             | $50,000                                                                                | $35,000                                                                                | $18,000                                                                                | $8,000                                                                                 | $4,000                                                                                 | $4,000                                                                                 |
+=== FAST ===
+147:| Attendee Registration Contact List: Opt-in only Social Media Promotion: From PyTorch X handle. All custom                                                                         | ✔ (List provided pre and post event) 1 Custom Post, 1 Group Post, and                  | ✔ (List provided post event) 1 Group Post and                                          | 1 Group Post                                                                           |                                                                                        |                                                                                   |                                                                                   |
+161:| Sponsorship Cost                                                                                                                                                                  |                                                                                        |                                                                                        |                                                                                        |                                                                                        |                                                                                   |                                                                                   |
+
+
+
+```
+
+
+
+
 
 
 
