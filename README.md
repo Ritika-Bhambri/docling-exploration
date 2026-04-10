@@ -256,7 +256,7 @@ Embedded is 64x larger than placeholder
 
 ## Table Structure Experiments
 
-To see how docling handles tables I tested two flags `-- accurate` and `--fast` 
+Docling has 2 table flags `--table-mode accurate` and `--table-mode fast` . After the layout model identifies a table region, a second model called *TableFormer* reconstructs the row boundaries, column separators, and content mapping. 
 
 ### Accurate Mode 
 
@@ -303,7 +303,7 @@ To see how docling handles tables I tested two flags `-- accurate` and `--fast`
 
 ### Table Corruption Proof
 
-To see what exactly was going wrong i wrote a piece of code to see the table corruption
+Both runs completed without errors or warnings. Both output files are similar in size. The corruption only became visible when I inspected specific rows directly. Here is the code i wrote to explicity demonstrate the table corruption in `--fast` mode
 
 ```python
 !echo "=== ACCURATE ==="
@@ -332,7 +332,115 @@ To see what exactly was going wrong i wrote a piece of code to see the table cor
 ```
 
 
+### Analysis
 
+**Table Mode: --table-mode accurate vs --table-mode fast**
+
+**Performance Results:**
+
+| Mode | Wall Time | Line Count |
+|---|---|---|
+| Accurate | 2m 3s | 281 |
+| Fast | 1m 53s | 283 |
+
+Fast mode is 10 seconds faster but it also generates 2 extra lines that are phantom rows created by cell overflow.
+
+**Three distinct failures:**
+
+**Failure 1** — Row merger: Lines 146 and 147 in accurate mode are two separate rows. 
+In fast mode they collapse into one, both row descriptions were concatenated inside a single cell 
+with no separator.
+
+**Failure 2** — Content overflow: The Diamond tier cell in the merged row contains values 
+from both rows joined together, cut off mid-sentence. 1 Re-Post disappeared entirely.
+
+**Failure 3** — Pricing row emptied: The Sponsorship Cost row exists in both outputs but 
+in fast mode every pricing cell is empty. $50,000, $35,000, $18,000, $8,000, $4,000, 
+$4,000 are all absent. The values were displaced into phantom rows that have no corresponding 
+real row in the document.
+
+### RAG Implication
+
+A RAG system querying "What is the cost of a Diamond sponsorship?" would retrieve the Sponsorship Cost row from fast mode output and find empty cells. It would either return nothing or hallucinate a value from training data. It silently corrupts the table, no errors were raised at any stage.
+
+`--table-mode fast` processes the documents in lesser time but it is less accurate. It produces structurally invalid output for complex tables. For documents with large, complex tables that carry the important knowledge `--table-mode accurate` is the right choice.
+
+
+## OCR Related Experiments
+
+### `--no-ocr` 
+
+```python
+%%time
+!docling documents/docling_brochure.pdf \
+  --to md \
+  --no-ocr \
+  --output outputs/no_ocr/
+
+!du -h outputs/no_ocr/docling_brochure.md
+!wc -l outputs/no_ocr/docling_brochure.md
+```
+
+### `--force-ocr`
+
+```python
+%%time
+!docling documents/docling_brochure.pdf \
+  --to md \
+  --force-ocr \
+  --profiling \
+  --output outputs/force_ocr/ 2>&1 | tee outputs/force_ocr/log.txt
+```
+
+### Ocr Profiling
+
+```python
+import re
+
+with open("outputs/force_ocr/log.txt") as f:
+    raw = f.read()
+
+clean = re.sub(r'\033\[[0-9;]*m', '', raw)
+for line in clean.split('\n'):
+    if line.strip():
+        print(line)
+```
+
+**Output**
+
+```bash
+[INFO] 2026-04-09 08:29:49,209 [RapidOCR] base.py:22: Using engine_name: torch
+[INFO] 2026-04-09 08:29:49,213 [RapidOCR] device_config.py:57: Using CPU device
+[INFO] 2026-04-09 08:29:49,261 [RapidOCR] download_file.py:60: File exists and is valid: /usr/local/lib/python3.12/dist-packages/rapidocr/models/ch_PP-OCRv4_det_mobile.pth
+[INFO] 2026-04-09 08:29:49,261 [RapidOCR] main.py:50: Using /usr/local/lib/python3.12/dist-packages/rapidocr/models/ch_PP-OCRv4_det_mobile.pth
+[INFO] 2026-04-09 08:29:49,512 [RapidOCR] base.py:22: Using engine_name: torch
+[INFO] 2026-04-09 08:29:49,512 [RapidOCR] device_config.py:57: Using CPU device
+[INFO] 2026-04-09 08:29:49,515 [RapidOCR] download_file.py:60: File exists and is valid: /usr/local/lib/python3.12/dist-packages/rapidocr/models/ch_ptocr_mobile_v2.0_cls_mobile.pth
+[INFO] 2026-04-09 08:29:49,515 [RapidOCR] main.py:50: Using /usr/local/lib/python3.12/dist-packages/rapidocr/models/ch_ptocr_mobile_v2.0_cls_mobile.pth
+[INFO] 2026-04-09 08:29:49,608 [RapidOCR] base.py:22: Using engine_name: torch
+[INFO] 2026-04-09 08:29:49,608 [RapidOCR] device_config.py:57: Using CPU device
+[INFO] 2026-04-09 08:29:49,693 [RapidOCR] download_file.py:60: File exists and is valid: /usr/local/lib/python3.12/dist-packages/rapidocr/models/ch_PP-OCRv4_rec_mobile.pth
+[INFO] 2026-04-09 08:29:49,694 [RapidOCR] main.py:50: Using /usr/local/lib/python3.12/dist-packages/rapidocr/models/ch_PP-OCRv4_rec_mobile.pth
+Loading weights:   0%|          | 0/770 [00:00<?, ?it/s]
+Loading weights: 100%|██████████| 770/770 [00:00<00:00, 15094.83it/s]
+                      Profiling Summary, docling_brochure                       
+┏━━━━━━━━┳━━━━━━━┳━━━━━━━━┳━━━━━━━━┳━━━━━━━━┳━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━━┓
+┃        ┃       ┃        ┃        ┃        ┃        ┃        ┃ 0.1   ┃ 0.9    ┃
+┃ Stage  ┃ count ┃ total  ┃ mean   ┃ median ┃ min    ┃ max    ┃ perc… ┃ perce… ┃
+┡━━━━━━━━╇━━━━━━━╇━━━━━━━━╇━━━━━━━━╇━━━━━━━━╇━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━━┩
+│ pipel… │ 1     │ 856.6… │ 856.6… │ 856.6… │ 856.6… │ 856.6… │ 856.… │ 856.6… │
+│ page_… │ 7     │ 7.673… │ 1.096… │ 0.488… │ 0.485… │ 0.491… │ 0.48… │ 0.490… │
+│ ocr    │ 7     │ 846.1… │ 120.8… │ 26.14… │ 24.68… │ 27.60… │ 24.9… │ 27.31… │
+│ layout │ 3     │ 34.42… │ 11.47… │ 4.919… │ 4.913… │ 4.925… │ 4.91… │ 4.924… │
+│ table… │ 7     │ 41.09… │ 5.870… │ 1.847… │ 1.844… │ 1.849… │ 1.84… │ 1.849… │
+│ page_… │ 7     │ 0.003… │ 0.000… │ 0.000… │ 0.000… │ 0.000… │ 0.00… │ 0.000… │
+│ doc_a… │ 1     │ 2.066… │ 2.066… │ 2.066… │ 2.066… │ 2.066… │ 2.06… │ 2.066… │
+│ readi… │ 1     │ 0.058… │ 0.058… │ 0.058… │ 0.058… │ 0.058… │ 0.05… │ 0.058… │
+│ doc_e… │ 1     │ 0.003… │ 0.003… │ 0.003… │ 0.003… │ 0.003… │ 0.00… │ 0.003… │
+└────────┴───────┴────────┴────────┴────────┴────────┴────────┴───────┴────────┘
+```
+
+### Analysis
 
 
 
