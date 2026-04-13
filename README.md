@@ -411,6 +411,42 @@ Docling's OCR engine(Rapid OCR) handles text extraction from image based regions
 
 <img width="940" height="427" alt="Screenshot 2026-04-10 193703" src="https://github.com/user-attachments/assets/3782141f-9076-4d30-8817-cc0373ebd58a" />
 
+### OCR Profiling
+
+After running `--force-ocr`, I wanted to understand exactly where the 14 minutes and 37 seconds went and which stage is responsible for this. The `--profiling` flag breaks down pipeline execution time per stage. Here is the code I wrote for it.
+
+```python
+import re
+
+with open("outputs/force_ocr/log.txt") as f:
+    raw = f.read()
+
+clean = re.sub(r'\033\[[0-9;]*m', '', raw)
+for line in clean.split('\n'):
+    if line.strip():
+        print(line)
+```
+
+This is what the output looked like 
+
+![OCR-Profiling1](https://github.com/user-attachments/assets/a1d04b96-f828-4152-8e84-a96a5dc70b0c)
+
+
+**Reading the profiling table:**
+
+| Stage | Total Time | % of Runtime |
+|---|---|---|
+| page_preprocessing | ~7.6s | 0.9% |
+| **ocr** | **~846s** | **98.8%** |
+| layout | ~34s | 4.0% |
+| table_structure | ~41s | 4.8% |
+| doc_assemble | ~2s | 0.2% |
+| **Total pipeline** | **~856s** | **100%** |
+
+OCR consumed 846 out of 856 seconds - **98.8% of total runtime**. Every other stage combined - layout analysis, table structure recognition, page preprocessing, document assembly took 10 seconds. OCR on 7 pages consumed the other 846.
+
+This happened because `--force-ocr` bypasses the embedded text layer and runs three neural network models on every page region sequentially.
+
 
 ### Observation
 
