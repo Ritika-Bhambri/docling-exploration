@@ -436,7 +436,7 @@ This is required for PDFs rich in scientific notations and mathematical formulas
   --output outputs/enrich_formula/
 ```
 
-### Without `--Enrich-code`
+### Without `--Enrich-formula`
 
 Here is the baseline paper without `--enrich code`. The **Attention formula** is garbled PDF glyph positions were extracted as a flat sequence of characters without preserving the structural relation between them.  
 
@@ -445,7 +445,7 @@ Here is the baseline paper without `--enrich code`. The **Attention formula** is
 
 
 
-### With `--Enrich-code`
+### With `--Enrich-formula`
 
  Transformer paper with `--enrich-code`. The **Attention formula** is LaTeX formatted which an LLM can parse correctly and a Markdown renderer can display properly.
 
