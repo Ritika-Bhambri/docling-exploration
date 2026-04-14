@@ -62,6 +62,8 @@ This was the output of the above code
 - 
    ![Baseline-visual](https://github.com/user-attachments/assets/a351d136-1a6b-400f-b3bb-fda339ffaa3a)
 
+
+- **Milestone 2 of the internship requires using RAG to provide the model with curated data from the Fedora RPM Packaging Guidelines. Markdown is the correct preprocessing output for this pipeline. The heading hierarchy (`#`, `##`, `###`) creates natural chunk boundaries for Docling's HybridChunker.**
 ### JSON 
 
 What the `--to json` flag does is that instead of serialising to a human-readable format, it serialises the entire internal DoclingDocument object directly to JSON. This is Docling's native data format the code for converting the original PDF to JSON
@@ -122,6 +124,8 @@ Pages          : 7
 - CPU time: user 270 ms + sys 38.5 ms = total 308 ms
 - File size: 6.5 MB
 - The file size is significantly larger than all other formats because the JSON contains all image data as base64 and all the structural metadata. It's the most information-dense format.
+- **Milestone 2 involves pushing the RAG vector database to an OCI container for deployment. JSON is the format Ramalama consumes internally when building that vector database. The schema analysis revealed that every text element carries a `page_no` and `bbox` bounding box coordinates. In a deployed compliance checker 
+(Milestone 3), when the model flags a spec file violation, these coordinates allow the system to cite the exact page and location in the guidelines where the rule is defined.**
 
 ### PlainText ###
 
@@ -151,6 +155,7 @@ this is what the `.txt` file looked like
 - CPU time: user 281 ms + sys 35.7 ms = total 316 ms
 - File size: 28 KB
 - The file very small, because it's just characters with no structural or visual data. I also noticed that there were no `<!-- image -->` comments, no base64 data, no image references whatsoever. This is because this format does not export images.
+- **Plain text is inappropriate for the Fedora RPM Guidelines RAG system. The guidelines document contains structured tables mapping package types to their requirements — naming conventions, dependency rules, version constraints. As demonstrated in the table mode experiments, these row-column relationships carry the compliance knowledge. Plain text flattens all table structure, making it hard for the RAG system to correctly answer certain queries. The 28KB file size appears efficient but the information loss makes it unsuitable for Milestone 2's RAG implementation.**
 
 
 ### Doctags ###
@@ -177,6 +182,7 @@ DocTags is Docling's own markup language. It is a structured text format that us
 - The Output produced was a lightweight file(28 KB) with semantic structure and document heirarchy well preserved.
 - This output looked a lot different than the rest of the documents generated thus far so i wanted to take a deeper look into the output. I found that every piece of content was wraped in small XML-style tags. The location co-ordinates like `<loc_153>` `<loc_210>` tell exactly where that text or image sits on the page.
 - DocTags may be useful for RAG applications that require lightweight processing with basic structure and region aware retrieval but for most RAG systems Markdown or JSON format are much easier to work with.
+- **DocTags is the training data format for vision-language models like SmolDocling and IBM Granite-Docling. It is not a RAG input format. For the Fedora RPM Guidelines RAG system in Milestone 2, DocTags provides no advantage over Markdown or JSON.**
 
 ### Image Modes
 
@@ -253,6 +259,9 @@ Embedded is 64x larger than placeholder
   - The output file is very small and lightweight (18 KB).
   - It has clean text and structure with minimal noise as it removes visual clutter that doesn't add value to text-based RAG systems which means that content of this format is easy to chunk.
   - This format is useful for text-based RAG systems that involve searching over documents and question answering.
+
+**For Milestone 2, the RAG vector database stores text embeddings. Base64 image data embedded in HTML produces chunks containing hundreds of characters of encoded pixel data that carry no semantic meaning for a text embedding model. These chunks inflate the vector database size and degrade retrieval quality by adding noise to the embedding space. Placeholder mode is 64x smaller, has same text content. It the correct choice for Milestone 2's text-based RAG pipeline. 
+The only scenario where embedded mode can be appropriate is a future multimodal extension of the system where a vision model processes packaging diagrams or workflow images alongside text.**
 
 ## Table Structure Experiments
 
@@ -445,7 +454,7 @@ This is what the output looked like
 
 OCR consumed 846 out of 856 seconds - **98.8% of total runtime**. Every other stage combined - layout analysis, table structure recognition, page preprocessing, document assembly took 10 seconds. OCR on 7 pages consumed the other 846.
 
-This happened because `--force-ocr` bypasses the embedded text layer and runs three neural network models on every page region sequentially.
+This happened because `--force-ocr` bypasses the embedded text layer and runs three neural network models on every page region sequentially. **Milestone 1 requires gathering and cleaning a dataset of approved and non-compliant RPM spec files. Spec files are plain text. They have no image layer and no OCR requirement. The Fedora RPM Packaging Guidelines document itself is digitally produced with an embedded text layer. For both document types in this pipeline, `--force-ocr` is incorrect and harmful .It degrades text quality and adds 98.8% overhead to processing time for zero benefit. Default OCR behaviour is selective and applied only to image-only regions. Hence Default OCR looks like the right choice for this task.**
 
 
 ### Observation
